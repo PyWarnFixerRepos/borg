@@ -47,8 +47,8 @@ class DebugMixIn:
         repo_objs = manifest.repo_objs
         try:
             archive_meta_orig = manifest.archives.get_raw_dict()[args.name]
-        except KeyError:
-            raise Archive.DoesNotExist(args.name)
+        except KeyError as exc:
+            raise Archive.DoesNotExist(args.name) from exc
 
         indent = 4
 
@@ -236,11 +236,11 @@ class DebugMixIn:
         try:
             id = hex_to_bin(hex_id, length=32)
         except ValueError as err:
-            raise CommandError(f"object id {hex_id} is invalid [{str(err)}].")
+            raise CommandError(f"object id {hex_id} is invalid [{str(err)}].") from err
         try:
             data = repository.get(id)
-        except Repository.ObjectNotFound:
-            raise RTError("object %s not found." % hex_id)
+        except Repository.ObjectNotFound as exc:
+            raise RTError("object %s not found." % hex_id) from exc
         with open(args.path, "wb") as f:
             f.write(data)
         print("object %s fetched." % hex_id)
@@ -263,7 +263,7 @@ class DebugMixIn:
         try:
             id = hex_to_bin(hex_id, length=32)
         except ValueError as err:
-            raise CommandError(f"object id {hex_id} is invalid [{str(err)}].")
+            raise CommandError(f"object id {hex_id} is invalid [{str(err)}].") from err
 
         with open(args.object_path, "rb") as f:
             cdata = f.read()
@@ -286,7 +286,7 @@ class DebugMixIn:
         try:
             id = hex_to_bin(hex_id, length=32)
         except ValueError as err:
-            raise CommandError(f"object id {hex_id} is invalid [{str(err)}].")
+            raise CommandError(f"object id {hex_id} is invalid [{str(err)}].") from err
 
         with open(args.binary_path, "rb") as f:
             data = f.read()
@@ -310,8 +310,7 @@ class DebugMixIn:
         try:
             id = hex_to_bin(hex_id, length=32)
         except ValueError as err:
-            raise CommandError(f"object id {hex_id} is invalid [{str(err)}].")
-
+            raise CommandError(f"object id {hex_id} is invalid [{str(err)}].") from err
         repository.put(id, data)
         print("object %s put." % hex_id)
         repository.commit(compact=False)

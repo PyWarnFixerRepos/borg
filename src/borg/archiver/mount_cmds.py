@@ -41,9 +41,9 @@ class MountMixIn:
             logger.info("Mounting filesystem")
             try:
                 operations.mount(args.mountpoint, args.options, args.foreground)
-            except RuntimeError:
+            except RuntimeError as exc:
                 # Relevant error message already printed to stderr by FUSE
-                raise RTError("FUSE mount failed")
+                raise RTError("FUSE mount failed") from exc
 
     def do_umount(self, args):
         """un-mount the FUSE filesystem"""

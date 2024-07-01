@@ -37,7 +37,7 @@ def ensure_dir(path, mode=stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO, pretty_dea
         os.makedirs(path, mode=mode, exist_ok=True)
     except OSError as e:
         if pretty_deadly:
-            raise Error(str(e))
+            raise Error(str(e)) from e
         else:
             raise
 
@@ -423,20 +423,20 @@ def safe_unlink(path):
     except OSError as unlink_err:
         if unlink_err.errno != errno.ENOSPC:
             # not free space related, give up here.
-            raise
+            raise unlink_err from None
         # we ran out of space while trying to delete the file.
         st = os.stat(path)
         if st.st_nlink > 1:
             # rather give up here than cause collateral damage to the other hardlink.
-            raise
+            raise unlink_err from None
         # no other hardlink! try to recover free space by truncating this file.
         try:
             # Do not create *path* if it does not exist, open for truncation in r+b mode (=O_RDWR|O_BINARY).
             with open(path, "r+b") as fd:
                 fd.truncate()
-        except OSError:
+        except OSError as truncate_err:
             # truncate didn't work, so we still have the original unlink issue - give up:
-            raise unlink_err
+            raise unlink_err from truncate_err
         else:
             # successfully truncated the file, try again deleting it:
             os.unlink(path)

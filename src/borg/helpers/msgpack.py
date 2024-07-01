@@ -100,7 +100,7 @@ class Packer(mp_Packer):
         try:
             return super().pack(obj)
         except Exception as e:
-            raise PackException(e)
+            raise PackException(e) from e
 
 
 def packb(o, *, use_bin_type=USE_BIN_TYPE, unicode_errors=UNICODE_ERRORS, **kwargs):
@@ -108,7 +108,7 @@ def packb(o, *, use_bin_type=USE_BIN_TYPE, unicode_errors=UNICODE_ERRORS, **kwar
     try:
         return mp_packb(o, use_bin_type=use_bin_type, unicode_errors=unicode_errors, **kwargs)
     except Exception as e:
-        raise PackException(e)
+        raise PackException(e) from e
 
 
 def pack(o, stream, *, use_bin_type=USE_BIN_TYPE, unicode_errors=UNICODE_ERRORS, **kwargs):
@@ -116,7 +116,7 @@ def pack(o, stream, *, use_bin_type=USE_BIN_TYPE, unicode_errors=UNICODE_ERRORS,
     try:
         return mp_pack(o, stream, use_bin_type=use_bin_type, unicode_errors=unicode_errors, **kwargs)
     except Exception as e:
-        raise PackException(e)
+        raise PackException(e) from e
 
 
 class Unpacker(mp_Unpacker):
@@ -158,7 +158,7 @@ class Unpacker(mp_Unpacker):
         except OutOfData:
             raise
         except Exception as e:
-            raise UnpackException(e)
+            raise UnpackException(e) from e
 
     def __next__(self):
         try:
@@ -166,7 +166,7 @@ class Unpacker(mp_Unpacker):
         except StopIteration:
             raise
         except Exception as e:
-            raise UnpackException(e)
+            raise UnpackException(e) from e
 
     next = __next__
 
@@ -179,7 +179,7 @@ def unpackb(packed, *, raw=RAW, unicode_errors=UNICODE_ERRORS, strict_map_key=Fa
         kw.update(kwargs)
         return mp_unpackb(packed, **kw)
     except Exception as e:
-        raise UnpackException(e)
+        raise UnpackException(e) from e
 
 
 def unpack(stream, *, raw=RAW, unicode_errors=UNICODE_ERRORS, strict_map_key=False, **kwargs):
@@ -190,7 +190,7 @@ def unpack(stream, *, raw=RAW, unicode_errors=UNICODE_ERRORS, strict_map_key=Fal
         kw.update(kwargs)
         return mp_unpack(stream, **kw)
     except Exception as e:
-        raise UnpackException(e)
+        raise UnpackException(e) from e
 
 
 # msgpacking related utilities -----------------------------------------------

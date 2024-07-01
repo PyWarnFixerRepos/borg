@@ -181,7 +181,7 @@ class IntegrityCheckedFile(FileLikeWrapper):
             return algorithm, digests
         except (ValueError, TypeError, KeyError) as e:
             logger.warning("Could not parse integrity data for %s: %s", path, e)
-            raise FileIntegrityError(path)
+            raise FileIntegrityError(path) from e
 
     def hash_part(self, partname, is_final=False):
         if not self.writing and not self.digests:
@@ -240,7 +240,7 @@ class DetachedIntegrityCheckedFile(IntegrityCheckedFile):
             logger.info("No integrity file found for %s", path)
         except OSError as e:
             logger.warning("Could not read integrity file for %s: %s", path, e)
-            raise FileIntegrityError(path)
+            raise FileIntegrityError(path) from e
 
     def store_integrity_data(self, data: str):
         with open(self.output_integrity_file, "w") as fd:

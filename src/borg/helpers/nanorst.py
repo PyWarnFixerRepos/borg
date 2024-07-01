@@ -105,10 +105,7 @@ def rst_to_text(text, state_hook=None, references=None):
                     try:
                         out.write(references[ref])
                     except KeyError:
-                        raise ValueError(
-                            "Undefined reference in Archiver help: %r — please add reference "
-                            "substitution to 'rst_plain_text_references'" % ref
-                        )
+                        raise ValueError(f"Undefined reference in Archiver help: {ref!r} — please add reference substitution to 'rst_plain_text_references'")
                     continue
                 if char == ":" and text.peek(2) == ":\n":  # End of line code block
                     text.read(2)

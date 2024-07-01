@@ -468,8 +468,8 @@ class Repository:
         self.path = path
         try:
             st = os.stat(path)
-        except FileNotFoundError:
-            raise self.DoesNotExist(path)
+        except FileNotFoundError as exc:
+            raise self.DoesNotExist(path) from exc
         if not stat.S_ISDIR(st.st_mode):
             raise self.InvalidRepository(path)
         if lock:
@@ -480,9 +480,9 @@ class Repository:
         try:
             with open(os.path.join(self.path, "config")) as fd:
                 self.config.read_file(fd)
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
             self.close()
-            raise self.InvalidRepository(self.path)
+            raise self.InvalidRepository(self.path) from exc
         if "repository" not in self.config.sections():
             self.close()
             raise self.InvalidRepositoryConfig(path, "no repository section found")
@@ -498,11 +498,8 @@ class Repository:
             raise self.InvalidRepositoryConfig(path, "max_segment_size >= %d" % MAX_SEGMENT_SIZE_LIMIT)  # issue 3592
         self.segments_per_dir = self.config.getint("repository", "segments_per_dir")
         self.additional_free_space = parse_file_size(self.config.get("repository", "additional_free_space", fallback=0))
-        # append_only can be set in the constructor
-        # it shouldn't be overridden (True -> False) here
         self.append_only = self.append_only or self.config.getboolean("repository", "append_only", fallback=False)
         if self.storage_quota is None:
-            # self.storage_quota is None => no explicit storage_quota was specified, use repository setting.
             self.storage_quota = parse_file_size(self.config.get("repository", "storage_quota", fallback=0))
         self.id = hex_to_bin(self.config.get("repository", "id").strip(), length=32)
         self.io = LoggedIO(self.path, self.max_segment_size, self.segments_per_dir)

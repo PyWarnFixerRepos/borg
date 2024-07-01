@@ -50,8 +50,8 @@ class KeyManager:
 
         try:
             manifest_chunk = self.repository.get(Manifest.MANIFEST_ID)
-        except Repository.ObjectNotFound:
-            raise NoManifestError
+        except Repository.ObjectNotFound as exc:
+            raise NoManifestError from exc
 
         manifest_data = RepoObj.extract_crypted_data(manifest_chunk)
         key = identify_key(manifest_data)

@@ -63,8 +63,8 @@ class TransferMixIn:
 
         try:
             UpgraderCls = getattr(upgrade_mod, f"Upgrader{args.upgrader}")
-        except AttributeError:
-            raise Error(f"No such upgrader: {args.upgrader}")
+        except AttributeError as exc:
+            raise Error(f"No such upgrader: {args.upgrader}") from exc
 
         if UpgraderCls is not upgrade_mod.UpgraderFrom12To20 and other_manifest.repository.version == 1:
             raise Error("To transfer from a borg 1.x repo, you need to use: --upgrader=From12To20")
@@ -87,22 +87,15 @@ class TransferMixIn:
                 for item in other_archive.iter_items():
                     is_part = bool(item.get("part", False))
                     if is_part:
-                        # borg 1.x created part files while checkpointing (in addition to the full
-                        # file in the final archive), like <filename>.borg_part_<part> with item.part >= 1.
-                        # borg2 archives do not have such special part items anymore.
-                        # so let's remove them from old archives also, considering there is no
-                        # code any more that deals with them in special ways (e.g. to get stats right).
                         continue
                     if "chunks" in item:
                         chunks = []
                         for chunk_id, size in item.chunks:
                             refcount = cache.seen_chunk(chunk_id, size)
-                            if refcount == 0:  # target repo does not yet have this chunk
+                            if refcount == 0:
                                 if not dry_run:
                                     cdata = other_repository.get(chunk_id)
                                     if args.recompress == "never":
-                                        # keep compressed payload same, verify via assert_id (that will
-                                        # decompress, but avoid needing to compress it again):
                                         meta, data = other_manifest.repo_objs.parse(
                                             chunk_id,
                                             cdata,
@@ -124,7 +117,6 @@ class TransferMixIn:
                                             ro_type=ROBJ_FILE_STREAM,
                                         )
                                     elif args.recompress == "always":
-                                        # always decompress and re-compress file data chunks
                                         meta, data = other_manifest.repo_objs.parse(
                                             chunk_id, cdata, ro_type=ROBJ_FILE_STREAM
                                         )
@@ -147,7 +139,7 @@ class TransferMixIn:
                                     chunks.append(chunk_entry)
                                 present_size += size
                         if not dry_run:
-                            item.chunks = chunks  # TODO: overwrite? IDs and sizes are same.
+                            item.chunks = chunks
                             archive.stats.nfiles += 1
                     if not dry_run:
                         item = upgrader.upgrade_item(item=item)

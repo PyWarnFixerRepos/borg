@@ -321,7 +321,7 @@ class AESKeyBase(KeyBase):
         try:
             return self.cipher.decrypt(data)
         except IntegrityError as e:
-            raise IntegrityError(f"Chunk {bin_to_hex(id)}: Could not decrypt [{str(e)}]")
+            raise IntegrityError(f"Chunk {bin_to_hex(id)}: Could not decrypt [{str(e)}]") from e
 
     def init_from_given_data(self, *, crypt_key, id_key, chunk_seed):
         assert len(crypt_key) in (32 + 32, 32 + 128)
@@ -858,7 +858,7 @@ class AEADKeyBase(KeyBase):
         try:
             return cipher.decrypt(data, aad=id)
         except IntegrityError as e:
-            raise IntegrityError(f"Chunk {bin_to_hex(id)}: Could not decrypt [{str(e)}]")
+            raise IntegrityError(f"Chunk {bin_to_hex(id)}: Could not decrypt [{str(e)}]") from e
 
     def init_from_given_data(self, *, crypt_key, id_key, chunk_seed):
         assert len(crypt_key) in (32 + 32, 32 + 128)

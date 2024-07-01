@@ -600,12 +600,12 @@ class RemoteRepository:
             self.sock = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
             try:
                 self.sock.connect(socket_path)  # note: socket_path length is rather limited.
-            except FileNotFoundError:
+            except FileNotFoundError as exc:
                 self.sock = None
-                raise Error(f"The socket file {socket_path} does not exist.")
-            except ConnectionRefusedError:
+                raise Error(f"The socket file {socket_path} does not exist.") from exc
+            except ConnectionRefusedError as exc:
                 self.sock = None
-                raise Error(f"There is no borg serve running for the socket file {socket_path}.")
+                raise Error(f"There is no borg serve running for the socket file {socket_path}.") from exc
             self.stdin_fd = self.sock.makefile("wb").fileno()
             self.stdout_fd = self.sock.makefile("rb").fileno()
             self.stderr_fd = None

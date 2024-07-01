@@ -250,8 +250,8 @@ class Manifest:
 
         try:
             cdata = repository.get(cls.MANIFEST_ID)
-        except Repository.ObjectNotFound:
-            raise NoManifestError
+        except Repository.ObjectNotFound as exc:
+            raise NoManifestError from exc
         if not key:
             key = key_factory(repository, cdata, ro_cls=ro_cls)
         manifest = cls(key, repository, ro_cls=ro_cls)

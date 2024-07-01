@@ -98,13 +98,13 @@ class KeysMixIn:
         else:
             try:
                 if os.path.isdir(args.path):
-                    raise IsADirectoryError
+                    raise IsADirectoryError(f"'{args.path}' must be a file, not a directory")
                 if args.qr:
                     manager.export_qr(args.path)
                 else:
                     manager.export(args.path)
-            except IsADirectoryError:
-                raise CommandError(f"'{args.path}' must be a file, not a directory")
+            except IsADirectoryError as exc:
+                raise CommandError(f"'{args.path}' must be a file, not a directory") from exc
 
     @with_repository(lock=False, exclusive=False, manifest=False, cache=False)
     def do_key_import(self, args, repository):

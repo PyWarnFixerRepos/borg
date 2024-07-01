@@ -696,9 +696,9 @@ Duration: {0.duration}
             err_msg = str(err)
             # hack to avoid changing the RPC protocol by introducing new (more specific) exception class
             if "More than allowed put data" in err_msg:
-                raise Error("%s - archive too big (issue #1473)!" % err_msg)
+                raise Error("%s - archive too big (issue #1473)!" % err_msg) from err
             else:
-                raise
+                raise Error("%s - archive too big (issue #1473)!" % err_msg) from err
         while self.repository.async_response(wait=True) is not None:
             pass
         self.manifest.archives[name] = (self.id, metadata.time)
@@ -1055,11 +1055,9 @@ Duration: {0.duration}
         def chunk_decref(id, stats):
             try:
                 self.cache.chunk_decref(id, stats, wait=False)
-            except KeyError:
+            except KeyError as exc:
                 cid = bin_to_hex(id)
-                raise ChunksIndexError(cid)
-            else:
-                fetch_async_response(wait=False)
+                raise ChunksIndexError(cid) from exc
 
         error = False
         try:
@@ -1088,7 +1086,7 @@ Duration: {0.duration}
                     error = True
             if progress:
                 pi.finish()
-        except (msgpack.UnpackException, Repository.ObjectNotFound):
+        except (msgpack.UnpackException, Repository.ObjectNotFound) as exc:
             # items metadata corrupted
             if forced == 0:
                 raise

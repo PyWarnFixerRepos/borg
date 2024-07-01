@@ -253,7 +253,7 @@ def format_line(format, data):
     try:
         return format.format_map(data)
     except Exception as e:
-        raise PlaceholderError(format, data, e.__class__.__name__, str(e))
+        raise PlaceholderError(format, data, e.__class__.__name__, str(e)) from e
 
 
 def _replace_placeholders(text, overrides={}):
@@ -642,9 +642,8 @@ def text_validator(*, name, max_length, min_length=0, invalid_ctrl_chars="\0", i
             raise argparse.ArgumentTypeError(f'Invalid {name}: "{text}" [leading or trailing blanks detected]')
         try:
             text.encode("utf-8", errors="strict")
-        except UnicodeEncodeError:
-            # looks like text contains surrogate-escapes
-            raise argparse.ArgumentTypeError(f'Invalid {name}: "{text}" [contains non-unicode characters]')
+        except UnicodeEncodeError as exc:
+            raise argparse.ArgumentTypeError(f'Invalid {name}: "{text}" [contains non-unicode characters]') from exc
         return text
 
     return validator

@@ -26,9 +26,9 @@ class RCreateMixIn:
             other_key.copy_crypt_key = args.copy_crypt_key
         try:
             key = key_creator(repository, args, other_key=other_key)
-        except (EOFError, KeyboardInterrupt):
+        except (EOFError, KeyboardInterrupt) as exc:
             repository.destroy()
-            raise CancelledByUser()
+            raise CancelledByUser() from exc
         manifest = Manifest(key, repository)
         manifest.key = key
         manifest.write()

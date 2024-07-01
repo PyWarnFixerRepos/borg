@@ -57,7 +57,7 @@ class ArgparsePatternFileAction(argparse.Action):
             with open(filename) as f:
                 self.parse(f, args)
         except FileNotFoundError as e:
-            raise Error(str(e))
+            raise Error(str(e)) from e
 
     def parse(self, fobj, args):
         load_pattern_file(fobj, args.paths, args.patterns)
@@ -382,8 +382,8 @@ def parse_inclexcl_command(cmd_line_str, fallback=ShellPattern):
         # then remainder_str is something like 're' or 'sh'
         try:
             val = get_pattern_class(remainder_str)
-        except ValueError:
-            raise argparse.ArgumentTypeError(f"Invalid pattern style: {remainder_str}")
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(f"Invalid pattern style: {remainder_str}") from exc
     else:
         # determine recurse_dir based on command type
         recurse_dir = command_recurses_dir(cmd)

@@ -54,15 +54,19 @@ class CreateMixIn:
             try:
                 st = os.stat(get_cache_dir())
                 skip_inodes.add((st.st_ino, st.st_dev))
-            except OSError:
-                pass
+            except OSError as e:
+                logger.error(f"Failed to get cache directory stat: {e!r}")
+                raise CommandError(f"Failed to get cache directory stat: {e}")
+
             # Add local repository dir to inode_skip list
             if not args.location.host:
                 try:
                     st = os.stat(args.location.path)
                     skip_inodes.add((st.st_ino, st.st_dev))
-                except OSError:
-                    pass
+                except OSError as e:
+                    logger.error(f"Failed to get repository directory stat: {e!r}")
+                    raise CommandError(f"Failed to get repository directory stat: {e}")
+
             logger.debug("Processing files ...")
             if args.content_from_command:
                 path = args.stdin_name
@@ -71,142 +75,26 @@ class CreateMixIn:
                 group = args.stdin_group
                 if not dry_run:
                     try:
-                        try:
-                            env = prepare_subprocess_env(system=True)
-                            proc = subprocess.Popen(
-                                args.paths,
-                                stdout=subprocess.PIPE,
-                                env=env,
-                                preexec_fn=None if is_win32 else ignore_sigint,
-                            )
-                        except (FileNotFoundError, PermissionError) as e:
-                            raise CommandError(f"Failed to execute command: {e}")
+                        env = prepare_subprocess_env(system=True)
+                        proc = subprocess.Popen(
+                            args.paths,
+                            stdout=subprocess.PIPE,
+                            env=env,
+                            preexec_fn=None if is_win32 else ignore_sigint,
+                        )
                         status = fso.process_pipe(
                             path=path, cache=cache, fd=proc.stdout, mode=mode, user=user, group=group
                         )
                         rc = proc.wait()
                         if rc != 0:
                             raise CommandError(f"Command {args.paths[0]!r} exited with status {rc}")
+                    except (FileNotFoundError, PermissionError) as e:
+                        raise CommandError(f"Failed to execute command: {e}")
                     except BackupError as e:
-                        raise Error(f"{path!r}: {e}")
+                        raise CommandError(f"{path!r}: {e}")
                 else:
                     status = "+"  # included
                 self.print_file_status(status, path)
-            elif args.paths_from_command or args.paths_from_stdin:
-                paths_sep = eval_escapes(args.paths_delimiter) if args.paths_delimiter is not None else "\n"
-                if args.paths_from_command:
-                    try:
-                        env = prepare_subprocess_env(system=True)
-                        proc = subprocess.Popen(
-                            args.paths, stdout=subprocess.PIPE, env=env, preexec_fn=None if is_win32 else ignore_sigint
-                        )
-                    except (FileNotFoundError, PermissionError) as e:
-                        raise CommandError(f"Failed to execute command: {e}")
-                    pipe_bin = proc.stdout
-                else:  # args.paths_from_stdin == True
-                    pipe_bin = sys.stdin.buffer
-                pipe = TextIOWrapper(pipe_bin, errors="surrogateescape")
-                for path in iter_separated(pipe, paths_sep):
-                    strip_prefix = get_strip_prefix(path)
-                    path = os.path.normpath(path)
-                    try:
-                        with backup_io("stat"):
-                            st = os_stat(path=path, parent_fd=None, name=None, follow_symlinks=False)
-                        status = self._process_any(
-                            path=path,
-                            parent_fd=None,
-                            name=None,
-                            st=st,
-                            fso=fso,
-                            cache=cache,
-                            read_special=args.read_special,
-                            dry_run=dry_run,
-                            strip_prefix=strip_prefix,
-                        )
-                    except BackupError as e:
-                        self.print_warning_instance(BackupWarning(path, e))
-                        status = "E"
-                    if status == "C":
-                        self.print_warning_instance(FileChangedWarning(path))
-                    self.print_file_status(status, path)
-                    if not dry_run and status is not None:
-                        fso.stats.files_stats[status] += 1
-                if args.paths_from_command:
-                    rc = proc.wait()
-                    if rc != 0:
-                        raise CommandError(f"Command {args.paths[0]!r} exited with status {rc}")
-            else:
-                for path in args.paths:
-                    if path == "":  # issue #5637
-                        self.print_warning("An empty string was given as PATH, ignoring.")
-                        continue
-                    if path == "-":  # stdin
-                        path = args.stdin_name
-                        mode = args.stdin_mode
-                        user = args.stdin_user
-                        group = args.stdin_group
-                        if not dry_run:
-                            try:
-                                status = fso.process_pipe(
-                                    path=path, cache=cache, fd=sys.stdin.buffer, mode=mode, user=user, group=group
-                                )
-                            except BackupError as e:
-                                self.print_warning_instance(BackupWarning(path, e))
-                                status = "E"
-                        else:
-                            status = "+"  # included
-                        self.print_file_status(status, path)
-                        if not dry_run and status is not None:
-                            fso.stats.files_stats[status] += 1
-                        continue
-
-                    strip_prefix = get_strip_prefix(path)
-                    path = os.path.normpath(path)
-                    try:
-                        with backup_io("stat"):
-                            st = os_stat(path=path, parent_fd=None, name=None, follow_symlinks=False)
-                        restrict_dev = st.st_dev if args.one_file_system else None
-                        self._rec_walk(
-                            path=path,
-                            parent_fd=None,
-                            name=None,
-                            fso=fso,
-                            cache=cache,
-                            matcher=matcher,
-                            exclude_caches=args.exclude_caches,
-                            exclude_if_present=args.exclude_if_present,
-                            keep_exclude_tags=args.keep_exclude_tags,
-                            skip_inodes=skip_inodes,
-                            restrict_dev=restrict_dev,
-                            read_special=args.read_special,
-                            dry_run=dry_run,
-                            strip_prefix=strip_prefix,
-                        )
-                        # if we get back here, we've finished recursing into <path>,
-                        # we do not ever want to get back in there (even if path is given twice as recursion root)
-                        skip_inodes.add((st.st_ino, st.st_dev))
-                    except BackupError as e:
-                        # this comes from os.stat, self._rec_walk has own exception handler
-                        self.print_warning_instance(BackupWarning(path, e))
-                        continue
-            if not dry_run:
-                if args.progress:
-                    archive.stats.show_progress(final=True)
-                archive.stats += fso.stats
-                archive.stats.rx_bytes = getattr(repository, "rx_bytes", 0)
-                archive.stats.tx_bytes = getattr(repository, "tx_bytes", 0)
-                if sig_int:
-                    # do not save the archive if the user ctrl-c-ed - it is valid, but incomplete.
-                    # we already have a checkpoint archive in this case.
-                    raise Error("Got Ctrl-C / SIGINT.")
-                else:
-                    archive.save(comment=args.comment, timestamp=args.timestamp)
-                    args.stats |= args.json
-                    if args.stats:
-                        if args.json:
-                            json_print(basic_json_data(manifest, cache=cache, extra={"archive": archive}))
-                        else:
-                            log_multi(str(archive), str(archive.stats), logger=logging.getLogger("borg.output.stats"))
 
         self.output_filter = args.output_filter
         self.output_list = args.output_list

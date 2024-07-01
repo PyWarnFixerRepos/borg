@@ -26,14 +26,14 @@ class ConfigMixIn:
                 if check_value:
                     try:
                         int(value)
-                    except ValueError:
-                        raise ValueError("Invalid value") from None
+                    except ValueError as e:
+                        raise ValueError("Invalid value") from e
             elif name in ["max_segment_size", "additional_free_space", "storage_quota"]:
                 if check_value:
                     try:
                         parse_file_size(value)
-                    except ValueError:
-                        raise ValueError("Invalid value") from None
+                    except ValueError as e:
+                        raise ValueError("Invalid value") from e
                     if name == "storage_quota":
                         if parse_file_size(value) < parse_file_size("10M"):
                             raise ValueError("Invalid value: storage_quota < 10M")
@@ -85,9 +85,8 @@ class ConfigMixIn:
                 print(f"{key} = {value}")
             for key in ["last_segment_checked"]:
                 value = config.get("repository", key, fallback=None)
-                if value is None:
-                    continue
-                print(f"{key} = {value}")
+                if value is not None:
+                    print(f"{key} = {value}")
 
         if not args.list:
             if args.name is None:
@@ -132,7 +131,7 @@ class ConfigMixIn:
                 try:
                     print(config.get(section, name))
                 except (configparser.NoOptionError, configparser.NoSectionError) as e:
-                    raise Error(e)
+                    raise Error(e) from e
         finally:
             if args.cache:
                 cache.close()

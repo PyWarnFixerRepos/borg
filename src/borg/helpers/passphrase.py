@@ -66,7 +66,7 @@ class Passphrase(str):
             try:
                 passphrase = subprocess.check_output(shlex.split(passcommand), text=True, env=env)
             except (subprocess.CalledProcessError, FileNotFoundError) as e:
-                raise PasscommandFailure(e)
+                raise PasscommandFailure(e) from e
             return cls(passphrase.rstrip("\n"))
 
     @classmethod
